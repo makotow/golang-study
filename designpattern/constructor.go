@@ -7,12 +7,11 @@ type StructA struct {
 	Name string
 }
 
-
 func (self *StructA) SomeInitialize() {
 	// initialize
 }
 
-// define constructor function 
+// define constructor function
 func NewStructA(name string) *StructA {
 	structA := &StructA{Name: name}
 	structA.SomeInitialize()
