@@ -22,8 +22,8 @@ type Log struct {
 	useragent   string
 }
 
-// ログを解析するための正規表現今のところ
-// apache のログを解析するための正規表現を定義
+// ログを解析するための正規表現
+// 今のところapache のログを解析するための正規表現を定義
 // 将来的には解析用の関数を渡すようにする。
 const (
 //	ippattern = `(\\d{1,3}\.\\d{1,3}\.\\d{1,3}\.\\d{1,3})`
@@ -37,23 +37,23 @@ func extractLog(line string) Log {
 	//	appacheLogFormatregex := regexp.MustCompile((apacheFormatPattern))
 	apacheLogSplitRegex := regexp.MustCompile((apacheFormatSplitPattern))
 
-	mathed := apacheLogSplitRegex.FindAllString(line, -1)
+	matched := apacheLogSplitRegex.FindAllString(line, -1)
 
-	if mathed == nil {
+	if matched == nil {
 		fmt.Println("does not much")
 		return Log{}
 	}
 
 	log := Log {
-		remotehost : mathed[0],
-		fromidentd : mathed[1],
-		remoteuser : mathed[2],
-		datetime : mathed[3],
-		httprequest : mathed[4],
-		httpstatus : mathed[5],
-		databytes : mathed[6],
-		refer : mathed[7],
-		useragent : mathed[8],
+		remotehost : matched[0],
+		fromidentd : matched[1],
+		remoteuser : matched[2],
+		datetime : matched[3],
+		httprequest : matched[4],
+		httpstatus : matched[5],
+		databytes : matched[6],
+		refer : matched[7],
+		useragent : matched[8],
 	}
 	return log
 }
