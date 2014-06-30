@@ -140,7 +140,7 @@ func main() {
 	for scanner.Scan() {
 		line := scanner.Text()
 		l := extractLog(line)
-		writer.Write([]string {l.remotehost,l.fromidentd,l.remoteuser,l.datetime.String(),l.httprequest,l.httpstatus,l.databytes,l.refer,l.useragent})
+		writer.Write([]string {l.remotehost, l.fromidentd, l.remoteuser, l.datetime.String(), l.httprequest, l.httpstatus, l.databytes, l.refer, l.useragent})
 		writer.Flush()
 		//		parsedLog.output(writer)
 		//		parsedLog.show()
