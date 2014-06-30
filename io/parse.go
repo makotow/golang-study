@@ -10,6 +10,7 @@ import (
 	"strings"
 	"bufio"
 	"time"
+	"encoding/csv"
 )
 
 type Log struct {
@@ -40,7 +41,6 @@ const (
 )
 
 func (l *Log) show() {
-
 	fmt.Printf("%v %v %v %v %v %v %v %v %v\n",
 		l.remotehost,
 		l.fromidentd,
@@ -53,23 +53,20 @@ func (l *Log) show() {
 		l.useragent)
 }
 
-
 // WIP ファイル書き出し用
 //		とりあえずテスト用に作る
-func (l *Log) output(w *Writer) {
-
-	fmt.Fprintf(
-		w,
-		"%v %v %v %v %v %v %v %v %v\n",
-		l.remotehost,
-		l.fromidentd,
-		l.remoteuser,
-		l.datetime.String(),
-		l.httprequest,
-		l.httpstatus,
-		l.databytes,
-		l.refer,
-		l.useragent)
+func (l *Log) output(w *csv.Writer) {
+	w.Write([]string {
+	l.remotehost,
+	l.fromidentd,
+	l.remoteuser,
+	l.datetime.String(),
+	l.httprequest,
+	l.httpstatus,
+	l.databytes,
+	l.refer,
+	l.useragent})
+	w.Flush()
 }
 
 func extractLog(line string) Log {
@@ -103,37 +100,50 @@ func timeParse(datetime string) time.Time {
 	// TODO ログを分解した時点で消す
 	datetime = strings.Trim(datetime, "[\"")
 	datetime = strings.Trim(datetime, "\"]")
-
 	t, err := time.Parse(timeformat, datetime)
-
-	if err != nil {
-		log.Fatal("parsing time formt error", err)
-	}
+	checkError("parsing time formt error", err)
 	return t
 }
 
+func checkError(message string, err error) {
+	if err != nil {
+		log.Fatal(message, err)
+	}
+}
 
 func main() {
 	var fp *os.File
+	var fop *os.File
 	var err error
 
-	if len(os.Args) < 2 {
+	if len(os.Args) < 3 {
 		fp = os.Stdin
 	} else {
 		fp, err = os.Open(os.Args[1])
-		if err != nil {
-			log.Fatal("could not open file.", err)
-		}
+		checkError("could not open file.", err)
 		defer fp.Close()
+
+		// ファイルを書き込みモードでオープン(ファイルがなかったら作成する)
+		fop, err := os.OpenFile(os.Args[2], os.O_WRONLY|os.O_CREATE, 0666)
+		checkError("could not open outputfile", err)
+		defer fop.Close()
 	}
 
 	begin := time.Now()
 	scanner := bufio.NewScanner(fp)
+	// Writerを書き込みモードでオープン
+	new_headers := []string { "remotehost", "fromidentd", "remoteuser", "datetime", "httprequest", "httpstatus", "databytes" , "refer", "useragent"}
+	writer := csv.NewWriter(fop)
+	err = writer.Write(new_headers)
+	checkError("could not write outputfile", err)
+
 	for scanner.Scan() {
 		line := scanner.Text()
-		parsedLog := extractLog(line)
-		parsedLog.show()
-
+		l := extractLog(line)
+		writer.Write([]string {l.remotehost,l.fromidentd,l.remoteuser,l.datetime.String(),l.httprequest,l.httpstatus,l.databytes,l.refer,l.useragent})
+		writer.Flush()
+		//		parsedLog.output(writer)
+		//		parsedLog.show()
 	}
 	fmt.Println("Elapsed time: ", time.Now().Sub(begin))
 }
