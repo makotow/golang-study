@@ -14,15 +14,16 @@ import (
 )
 
 type Log struct {
-	remotehost  string
-	fromidentd  string
-	remoteuser  string
-	datetime    time.Time
-	httprequest string
-	httpstatus  string
-	databytes   string
-	refer       string
-	useragent   string
+	Id string
+	Remotehost  string
+	Fromidentd  string
+	Remoteuser  string
+	Datetime    string
+	Httprequest string
+	Httpstatus  string
+	Databytes   string
+	Refer       string
+	Useragent   string
 }
 
 // ログを解析するための正規表現
@@ -42,30 +43,30 @@ const (
 
 func (l *Log) show() {
 	fmt.Printf("%v %v %v %v %v %v %v %v %v\n",
-		l.remotehost,
-		l.fromidentd,
-		l.remoteuser,
-		l.datetime.String(),
-		l.httprequest,
-		l.httpstatus,
-		l.databytes,
-		l.refer,
-		l.useragent)
+		l.Remotehost,
+		l.Fromidentd,
+		l.Remoteuser,
+		l.Datetime,
+		l.Httprequest,
+		l.Httpstatus,
+		l.Databytes,
+		l.Refer,
+		l.Useragent)
 }
 
 // WIP ファイル書き出し用
 //		とりあえずテスト用に作る
 func (l *Log) output(w *csv.Writer) {
 	w.Write([]string {
-	l.remotehost,
-	l.fromidentd,
-	l.remoteuser,
-	l.datetime.String(),
-	l.httprequest,
-	l.httpstatus,
-	l.databytes,
-	l.refer,
-	l.useragent})
+	l.Remotehost,
+	l.Fromidentd,
+	l.Remoteuser,
+	l.Datetime,
+	l.Httprequest,
+	l.Httpstatus,
+	l.Databytes,
+	l.Refer,
+	l.Useragent})
 	w.Flush()
 }
 
@@ -82,15 +83,15 @@ func extractLog(line string) Log {
 	}
 
 	log := Log {
-		remotehost : matched[0],
-		fromidentd : matched[1],
-		remoteuser : matched[2],
-		datetime : timeParse(matched[3]),
-		httprequest : matched[4],
-		httpstatus : matched[5],
-		databytes : matched[6],
-		refer : matched[7],
-		useragent : matched[8],
+		Remotehost : matched[0],
+		Fromidentd : matched[1],
+		Remoteuser : matched[2],
+		Datetime : matched[3],
+		Httprequest : strings.Trim(matched[4], "\""),
+		Httpstatus : matched[5],
+		Databytes : matched[6],
+		Refer : strings.Trim(matched[7], "\""),
+		Useragent : strings.Trim(matched[8], "\""),
 	}
 	return log
 }
@@ -107,7 +108,8 @@ func timeParse(datetime string) time.Time {
 
 func checkError(message string, err error) {
 	if err != nil {
-		log.Fatal(message, err)
+//		log.Fatal(message, err)
+		log.Panicln(message, err)
 	}
 }
 
@@ -125,25 +127,27 @@ func main() {
 
 		// ファイルを書き込みモードでオープン(ファイルがなかったら作成する)
 		fop, err := os.OpenFile(os.Args[2], os.O_WRONLY|os.O_CREATE, 0666)
-		checkError("could not open outputfile", err)
+		checkError(" could not open outputfile ", err)
 		defer fop.Close()
 	}
 
 	begin := time.Now()
 	scanner := bufio.NewScanner(fp)
+
 	// Writerを書き込みモードでオープン
 	new_headers := []string { "remotehost", "fromidentd", "remoteuser", "datetime", "httprequest", "httpstatus", "databytes" , "refer", "useragent"}
 	writer := csv.NewWriter(fop)
 	err = writer.Write(new_headers)
-	checkError("could not write outputfile", err)
+	checkError(" could not write outputfile ", err)
 
 	for scanner.Scan() {
 		line := scanner.Text()
 		l := extractLog(line)
-		writer.Write([]string {l.remotehost, l.fromidentd, l.remoteuser, l.datetime.String(), l.httprequest, l.httpstatus, l.databytes, l.refer, l.useragent})
+		record := []string {l.Remotehost, l.Fromidentd, l.Remoteuser, l.Datetime, l.Httprequest, l.Httpstatus, l.Databytes, l.Refer, l.Useragent}
+		log.Printf("%#v", record)
+		err := writer.Write(record)
+		checkError(" output csv failed ", err)
 		writer.Flush()
-		//		parsedLog.output(writer)
-		//		parsedLog.show()
 	}
 	fmt.Println("Elapsed time: ", time.Now().Sub(begin))
 }
