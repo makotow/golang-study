@@ -92,7 +92,7 @@ func extractLog(line string) Log {
 		Remotehost : matched[0],
 		Fromidentd : matched[1],
 		Remoteuser : matched[2],
-		Datetime : strings.Trim(strings.Trim(matched[3], "[\""), "\"]"),
+		Datetime : strings.Trim(strings.Trim(matched[3], "["), "]"),
 		Httprequest : strings.Trim(matched[4], "\""),
 		Httpstatus : matched[5],
 		Databytes : matched[6],
