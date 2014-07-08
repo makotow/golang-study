@@ -122,17 +122,12 @@ func main() {
 	var fp *os.File
 	var err error
 
-	if len(os.Args) < 3 {
+	if len(os.Args) < 2 {
 		fp = os.Stdin
 	} else {
 		fp, err = os.Open(os.Args[1])
 		checkError("could not open file.", err)
 		defer fp.Close()
-
-		// ファイルを書き込みモードでオープン(ファイルがなかったら作成する)
-		fop, err := os.OpenFile(os.Args[2], os.O_WRONLY|os.O_CREATE, 0666)
-		checkError(" could not open outputfile ", err)
-		defer fop.Close()
 	}
 
 	begin := time.Now()
