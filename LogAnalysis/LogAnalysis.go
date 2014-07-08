@@ -10,11 +10,16 @@ import (
 	"strings"
 	"bufio"
 	"time"
-	"encoding/csv"
+
+	"path/filepath"
+
+	"database/sql"
+	"github.com/coopernurse/gorp"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Log struct {
-	Id string
+	Id          int64
 	Remotehost  string
 	Fromidentd  string
 	Remoteuser  string
@@ -32,7 +37,6 @@ type Log struct {
 const (
 	// WIP apacheLogFormatpattern   = `"^/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`
 	apacheFormatSplitPattern = `"([^"]+)"|(\[[^\]]+\])|(\S+)`
-
 )
 
 //　日付フォーマット
@@ -41,33 +45,35 @@ const (
 	timeformat = "02/Jan/2006:15:04:05 -0700"
 )
 
-func (l *Log) show() {
-	fmt.Printf("%v %v %v %v %v %v %v %v %v\n",
-		l.Remotehost,
-		l.Fromidentd,
-		l.Remoteuser,
-		l.Datetime,
-		l.Httprequest,
-		l.Httpstatus,
-		l.Databytes,
-		l.Refer,
-		l.Useragent)
+var (
+	Driver        = "sqlite3"
+	HOME          = os.Getenv("HOME")
+	DataSourceDir = ""
+	DataSource    = ""
+)
+
+func init() {
+	fmt.Println("calling init func.")
+
+	if HOME == "" {
+		HOME = "/tmp"
+	}
+	DataSourceDir = filepath.Join(HOME, "tmp", "db")
+	if err := os.MkdirAll(DataSourceDir, 0755); err != nil {
+		checkError("create failed dir ", err)
+	}
+	DataSource = filepath.Join(DataSourceDir, "log.db")
 }
 
-// WIP ファイル書き出し用
-//		とりあえずテスト用に作る
-func (l *Log) output(w *csv.Writer) {
-	w.Write([]string {
-	l.Remotehost,
-	l.Fromidentd,
-	l.Remoteuser,
-	l.Datetime,
-	l.Httprequest,
-	l.Httpstatus,
-	l.Databytes,
-	l.Refer,
-	l.Useragent})
-	w.Flush()
+func initDb() *gorp.DbMap {
+	db, err := sql.Open(Driver, DataSource)
+	checkError(" sql.Open failed ", err)
+
+	dbmap := &gorp.DbMap{Db: db, Dialect: gorp.SqliteDialect{}}
+	dbmap.AddTableWithName(Log{}, "Log").SetKeys(true, "Id")
+	err = dbmap.CreateTablesIfNotExists()
+	checkError(" Create tables failed ", err)
+	return dbmap
 }
 
 func extractLog(line string) Log {
@@ -78,7 +84,7 @@ func extractLog(line string) Log {
 	matched := apacheLogSplitRegex.FindAllString(line, -1)
 
 	if matched == nil {
-		fmt.Println("does not much")
+		log.Fatalln("does not much")
 		return Log{}
 	}
 
@@ -86,7 +92,7 @@ func extractLog(line string) Log {
 		Remotehost : matched[0],
 		Fromidentd : matched[1],
 		Remoteuser : matched[2],
-		Datetime : matched[3],
+		Datetime : strings.Trim(strings.Trim(matched[3], "[\""), "\"]"),
 		Httprequest : strings.Trim(matched[4], "\""),
 		Httpstatus : matched[5],
 		Databytes : matched[6],
@@ -108,14 +114,12 @@ func timeParse(datetime string) time.Time {
 
 func checkError(message string, err error) {
 	if err != nil {
-//		log.Fatal(message, err)
-		log.Panicln(message, err)
+		log.Fatal(message, err)
 	}
 }
 
 func main() {
 	var fp *os.File
-	var fop *os.File
 	var err error
 
 	if len(os.Args) < 3 {
@@ -133,21 +137,16 @@ func main() {
 
 	begin := time.Now()
 	scanner := bufio.NewScanner(fp)
+	dbmap := initDb()
+	defer dbmap.Db.Close()
 
-	// Writerを書き込みモードでオープン
-	new_headers := []string { "remotehost", "fromidentd", "remoteuser", "datetime", "httprequest", "httpstatus", "databytes" , "refer", "useragent"}
-	writer := csv.NewWriter(fop)
-	err = writer.Write(new_headers)
-	checkError(" could not write outputfile ", err)
-
+	tx, _ := dbmap.Begin()
 	for scanner.Scan() {
 		line := scanner.Text()
 		l := extractLog(line)
-		record := []string {l.Remotehost, l.Fromidentd, l.Remoteuser, l.Datetime, l.Httprequest, l.Httpstatus, l.Databytes, l.Refer, l.Useragent}
-		log.Printf("%#v", record)
-		err := writer.Write(record)
-		checkError(" output csv failed ", err)
-		writer.Flush()
+		tx.Insert(&l)
 	}
+	tx.Commit()
+
 	fmt.Println("Elapsed time: ", time.Now().Sub(begin))
 }
