@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func get_name() (string, string) {
+func getName() (string, string) {
 	// No reason to brew a few rules, right
 	var hello = "Hello"
 	audience := "DevFestTR"
@@ -15,7 +15,7 @@ func get_name() (string, string) {
 }
 
 func handler(writer http.ResponseWriter, request *http.Request) {
-	hello, audience := get_name()
+	hello, audience := getName()
 	fmt.Fprintf(writer, hello+audience)
 }
 
