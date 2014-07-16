@@ -1,4 +1,4 @@
-package main
+package examples
 
 import (
 	"fmt"
@@ -40,10 +40,10 @@ func measure(g geometry) {
 	fmt.Println(g.perim())
 }
 
-func main() {
-	s := square{width: 3, height: 4}
-	c := circle{radius: 5}
-
-	measure(s)
-	measure(c)
-}
+//func main() {
+//	s := square{width: 3, height: 4}
+//	c := circle{radius: 5}
+//
+//	measure(s)
+//	measure(c)
+//}
